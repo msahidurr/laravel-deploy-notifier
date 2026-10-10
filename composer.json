@@ -1,0 +1,53 @@
+{
+    "name": "msahidurr/laravel-deploy-notifier",
+    "description": "Git and deployment lifecycle notifications for Laravel, delivered to Telegram",
+    "keywords": ["laravel", "deployment", "notifications", "telegram", "git"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sahidur Rahman",
+            "email": "hisbd.info@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "guzzlehttp/guzzle": "^7.2",
+        "illuminate/console": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/contracts": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/http": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/process": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/routing": "^10.0 || ^11.0 || ^12.0",
+        "illuminate/support": "^10.0 || ^11.0 || ^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0 || ^9.0 || ^10.0",
+        "phpunit/phpunit": "^10.0 || ^11.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "MSahidurr\\DeployNotifier\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MSahidurr\\DeployNotifier\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MSahidurr\\DeployNotifier\\DeployNotifierServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    }
+}
