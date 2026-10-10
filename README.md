@@ -161,42 +161,51 @@ Deduplication markers and the deployment lock live in whichever store
   $schedule->command('deploy-notifier:prune')->daily();
   ```
 
-## Slack (optional, in addition to Telegram)
+## Slack and Discord (optional, in addition to Telegram)
 
-Disabled by default. When enabled, every event already going to Telegram is
-*also* posted to Slack - it supplements Telegram, it doesn't replace it.
+Both disabled by default, both independent of each other, and both
+*supplement* Telegram rather than replace it - enable either, both, or
+neither. An event going to Telegram also goes to every other channel
+you've enabled.
 
 ```dotenv
 DEPLOY_SLACK_ENABLED=true
 DEPLOY_SLACK_PRODUCTION_WEBHOOK_URL=https://hooks.slack.com/services/...
 DEPLOY_SLACK_STAGING_WEBHOOK_URL=https://hooks.slack.com/services/...
+
+DEPLOY_DISCORD_ENABLED=true
+DEPLOY_DISCORD_PRODUCTION_WEBHOOK_URL=https://discord.com/api/webhooks/...
+DEPLOY_DISCORD_STAGING_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-A Slack [incoming webhook](https://api.slack.com/messaging/webhooks) URL
-*is* the secret (Slack has no separate token for it), so treat it like one -
-keep it out of version control and rotate it if it leaks. It's covered by
-the same redaction and delivery-failure safety guarantees as the bot token
-below. Delivery is handled by `SendSlackNotification`, a listener on
-`DeploymentEventReceived` - see **Extending** if you want to swap it for
-something else (Discord, a second Slack channel, ...).
+A Slack [incoming webhook](https://api.slack.com/messaging/webhooks) or
+Discord [incoming webhook](https://support.discord.com/hc/en-us/articles/228383668)
+URL *is* the secret for that channel (neither has a separate token), so
+treat it like one - keep it out of version control and rotate it if it
+leaks. Both are covered by the same redaction and delivery-failure safety
+guarantees as the Telegram bot token below. Delivery is handled by
+`SendSlackNotification` / `SendDiscordNotification`, each a listener on
+`DeploymentEventReceived` - see **Extending** if you want to add a
+different channel using the same pattern.
 
 ## Safety guarantees this package relies on
 
-- **Notification failures never become deployment failures.** Both the
-  Telegram and Slack transports catch every delivery problem (timeout, API
-  error, DNS failure) and log it locally; neither throws, and neither ever
-  flips a `success` into a `failure` or vice versa.
+- **Notification failures never become deployment failures.** The Telegram,
+  Slack and Discord transports all catch every delivery problem (timeout,
+  API error, DNS failure) and log it locally; none of them throws, and none
+  ever flips a `success` into a `failure` or vice versa.
 - **The `:fail` command never reports its own notification failure as a
-  second deployment failure.** That would risk a notification loop. Telegram
-  and Slack problems while reporting a failure are only ever logged.
-- **Secrets never reach Telegram, Slack, or the log in cleartext.** Every
-  outgoing message is passed through redaction for the configured bot
-  token, webhook secret, and Slack webhook URLs, plus generic patterns
-  (bearer tokens, GitHub signature headers, Telegram-bot-token-shaped
-  strings) as a second line of defense. The bot token and Slack webhook URL
-  are also specifically scrubbed from exception messages before they reach
-  a log - HTTP client errors routinely embed the full request URL (which
-  contains both) in their message.
+  second deployment failure.** That would risk a notification loop.
+  Telegram, Slack and Discord problems while reporting a failure are only
+  ever logged.
+- **Secrets never reach Telegram, Slack, Discord, or the log in cleartext.**
+  Every outgoing message is passed through redaction for the configured bot
+  token, webhook secret, and Slack/Discord webhook URLs, plus generic
+  patterns (bearer tokens, GitHub signature headers, Telegram-bot-token-
+  shaped strings) as a second line of defense. The bot token and the
+  Slack/Discord webhook URLs are also specifically scrubbed from exception
+  messages before they reach a log - HTTP client errors routinely embed the
+  full request URL (which contains them) in their message.
 - **Duplicate events are suppressed**, both for webhook deliveries (by
   GitHub's delivery id) and for lifecycle events (by `type:deployment-id`),
   using an atomic cache write with a configurable TTL.
@@ -209,9 +218,10 @@ Every processed event - including ones that were not delivered because no
 destination was configured - dispatches
 `MSahidurr\DeployNotifier\Events\DeploymentEventReceived`, carrying the
 `DeploymentEvent` DTO and whether delivery succeeded. `SendSlackNotification`
-(see above) is a working example of a listener built on this: look at it as
-a template for your own (Discord, metrics, persistence, ...). A second
-transport can also be added by binding your own implementation of
+and `SendDiscordNotification` (see above) are working examples of listeners
+built on this: look at either as a template for your own (Microsoft Teams,
+metrics, persistence, ...). A second transport can also be added by binding
+your own implementation of
 `MSahidurr\DeployNotifier\Contracts\NotificationTransport` over the default
 `TelegramTransport`, if you want to replace the primary transport entirely
 rather than add a supplementary one.

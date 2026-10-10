@@ -38,6 +38,9 @@ class StatusCommand extends BaseCommand
             $this->components->twoColumnDetail("Channel [{$environment}]", $chatId ? 'configured' : '<fg=red>not set</>');
         }
 
+        $this->reportOptionalTransportStatus('Slack', 'slack');
+        $this->reportOptionalTransportStatus('Discord', 'discord');
+
         $this->newLine();
         $this->line('<fg=yellow>GitHub webhook</>');
         $this->components->twoColumnDetail('Webhook secret', config('deploy-notifier.github.webhook_secret') ? 'configured' : 'not set (webhook route disabled)');
@@ -62,5 +65,29 @@ class StatusCommand extends BaseCommand
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Slack and Discord are both optional, additional, independently
+     * toggled transports with the same shape of config (enabled +
+     * per-environment webhook URLs) - shared here so :status reports on
+     * both exactly like it does for Telegram, rather than leaving
+     * someone who enabled either with no way to check it's wired up.
+     */
+    private function reportOptionalTransportStatus(string $label, string $configKey): void
+    {
+        $enabled = (bool) config("deploy-notifier.{$configKey}.enabled", false);
+
+        $this->newLine();
+        $this->line("<fg=yellow>{$label}</>");
+        $this->components->twoColumnDetail('Enabled', $enabled ? 'yes' : 'no');
+
+        if (! $enabled) {
+            return;
+        }
+
+        foreach ((array) config("deploy-notifier.{$configKey}.webhooks", []) as $environment => $webhookUrl) {
+            $this->components->twoColumnDetail("Webhook [{$environment}]", $webhookUrl ? 'configured' : '<fg=red>not set</>');
+        }
     }
 }

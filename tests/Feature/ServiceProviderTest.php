@@ -2,8 +2,12 @@
 
 namespace MSahidurr\DeployNotifier\Tests\Feature;
 
+use MSahidurr\DeployNotifier\Events\DeploymentEventReceived;
+use MSahidurr\DeployNotifier\Listeners\SendDiscordNotification;
+use MSahidurr\DeployNotifier\Listeners\SendSlackNotification;
 use MSahidurr\DeployNotifier\Services\DeploymentManager;
 use MSahidurr\DeployNotifier\Tests\TestCase;
+use MSahidurr\DeployNotifier\Transports\DiscordTransport;
 use MSahidurr\DeployNotifier\Transports\SlackTransport;
 
 class ServiceProviderTest extends TestCase
@@ -14,19 +18,31 @@ class ServiceProviderTest extends TestCase
         $this->assertSame('Test Project', config('deploy-notifier.project'));
         $this->assertIsArray(config('deploy-notifier.telegram.channels'));
         $this->assertFalse(config('deploy-notifier.slack.enabled'));
+        $this->assertFalse(config('deploy-notifier.discord.enabled'));
     }
 
     public function test_core_services_resolve_out_of_the_container(): void
     {
         $this->assertInstanceOf(DeploymentManager::class, $this->app->make(DeploymentManager::class));
         $this->assertInstanceOf(SlackTransport::class, $this->app->make(SlackTransport::class));
+        $this->assertInstanceOf(DiscordTransport::class, $this->app->make(DiscordTransport::class));
     }
 
-    public function test_the_slack_listener_is_registered_on_deployment_event_received(): void
+    public function test_the_slack_and_discord_listeners_are_registered_on_deployment_event_received(): void
     {
-        $listeners = $this->app['events']->getListeners(\MSahidurr\DeployNotifier\Events\DeploymentEventReceived::class);
+        // getListeners() returns resolved Closures (not inspectable by
+        // class), so use getRawListeners() to check which listener
+        // classes are actually wired up.
+        $raw = $this->app['events']->getRawListeners()[DeploymentEventReceived::class] ?? [];
 
-        $this->assertNotEmpty($listeners, 'No listener is registered for DeploymentEventReceived.');
+        $this->assertNotEmpty($raw, 'No listener is registered for DeploymentEventReceived.');
+        $this->assertContains(SendSlackNotification::class, $raw);
+        $this->assertContains(SendDiscordNotification::class, $raw);
+
+        // And confirm they're actually invokable end-to-end, not just
+        // present in the raw list.
+        $listeners = $this->app['events']->getListeners(DeploymentEventReceived::class);
+        $this->assertNotEmpty($listeners);
     }
 
     public function test_lifecycle_commands_are_registered(): void

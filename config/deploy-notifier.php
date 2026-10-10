@@ -97,6 +97,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Discord transport (optional, additional to Telegram)
+    |--------------------------------------------------------------------------
+    |
+    | Disabled by default. Independent of Slack - Telegram, Slack and
+    | Discord can all be enabled at once. See SendDiscordNotification,
+    | which listens for DeploymentEventReceived.
+    |
+    */
+
+    'discord' => [
+        'enabled' => env('DEPLOY_DISCORD_ENABLED', false),
+        'timeout' => (int) env('DEPLOY_DISCORD_TIMEOUT', 5),
+        'retry_times' => (int) env('DEPLOY_DISCORD_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('DEPLOY_DISCORD_RETRY_SLEEP_MS', 250),
+
+        // Environment name => incoming webhook URL. The URL itself is
+        // the secret - Discord has no separate token - so treat it like
+        // one (keep it out of version control, rotate it if it leaks).
+        'webhooks' => [
+            'production' => env('DEPLOY_DISCORD_PRODUCTION_WEBHOOK_URL'),
+            'staging' => env('DEPLOY_DISCORD_STAGING_WEBHOOK_URL'),
+            'development' => env('DEPLOY_DISCORD_DEVELOPMENT_WEBHOOK_URL'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | GitHub push webhook
     |--------------------------------------------------------------------------
     */

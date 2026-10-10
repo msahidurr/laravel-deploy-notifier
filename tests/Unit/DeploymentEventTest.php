@@ -68,4 +68,61 @@ class DeploymentEventTest extends TestCase
 
         $this->assertLessThanOrEqual(2, abs(time() - $event->occurredAt->getTimestamp()));
     }
+
+    public function test_to_array_exposes_every_field_under_a_stable_snake_case_key(): void
+    {
+        // Documented as the public shape of DeploymentEventReceived's
+        // payload (see README "Extending") for listeners that persist or
+        // forward it, so the keys and their mapping to properties are a
+        // contract worth locking down explicitly.
+        $event = new DeploymentEvent(
+            type: DeploymentEvent::TYPE_FAILED,
+            deploymentId: 'deploy-1',
+            project: 'Test',
+            environment: 'production',
+            server: 'web-01',
+            repository: 'org/repo',
+            branch: 'main',
+            commit: 'abc123',
+            previousCommit: 'def456',
+            author: 'developer',
+            commitMessage: 'fix bug',
+            step: 'composer install',
+            exitCode: 2,
+            newCommitCount: 3,
+            extra: ['foo' => 'bar'],
+        );
+
+        $array = $event->toArray();
+
+        $this->assertSame([
+            'type' => DeploymentEvent::TYPE_FAILED,
+            'deployment_id' => 'deploy-1',
+            'project' => 'Test',
+            'environment' => 'production',
+            'server' => 'web-01',
+            'repository' => 'org/repo',
+            'branch' => 'main',
+            'commit' => 'abc123',
+            'previous_commit' => 'def456',
+            'author' => 'developer',
+            'commit_message' => 'fix bug',
+            'step' => 'composer install',
+            'exit_code' => 2,
+            'new_commit_count' => 3,
+            'occurred_at' => $event->occurredAt->format(\DateTimeInterface::ATOM),
+            'extra' => ['foo' => 'bar'],
+        ], $array);
+    }
+
+    public function test_to_array_uses_null_for_every_unset_optional_field(): void
+    {
+        $event = new DeploymentEvent(DeploymentEvent::TYPE_STARTED, 'd1', 'Test', 'production');
+
+        $array = $event->toArray();
+
+        foreach (['server', 'repository', 'branch', 'commit', 'previous_commit', 'author', 'commit_message', 'step', 'exit_code', 'new_commit_count'] as $key) {
+            $this->assertNull($array[$key], "Expected [{$key}] to be null.");
+        }
+    }
 }

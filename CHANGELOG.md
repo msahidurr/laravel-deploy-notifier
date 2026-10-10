@@ -21,6 +21,10 @@ This project follows [Semantic Versioning](https://semver.org/).
   than replacing Telegram, via a `SendSlackNotification` listener on
   `DeploymentEventReceived` - also a working template for adding further
   transports.
+- Optional Discord delivery (`DEPLOY_DISCORD_ENABLED=true`) via
+  `DiscordTransport`/`SendDiscordNotification`, same pattern as Slack and
+  independent of it - Telegram, Slack and Discord can all be enabled at
+  once.
 - Full PHPUnit/Orchestra Testbench test suite covering the above, including
   Telegram retry behaviour, webhook payload-size and malformed-JSON
   handling, and secret redaction in logged exception messages.
@@ -84,3 +88,14 @@ This project follows [Semantic Versioning](https://semver.org/).
   from blocking CI. Verified locally (via the actual pinning steps the
   workflow runs) that dependencies now resolve and the full test suite
   passes for Laravel 10 (PHP 8.1), 11 and 12 (PHP 8.3).
+- `deploy-notifier:status` never reported on Slack or Discord at all -
+  enabling either and misconfiguring it (missing webhook URL, typo in the
+  env var) gave no indication anything was wrong. It now reports each
+  one's enabled state and, when enabled, every configured webhook per
+  environment, the same way it already did for Telegram.
+- `PushCommand`, `StatusCommand` and `InstallCommand` had zero test
+  coverage (`PushCommand` wasn't exercised at all beyond being present in
+  the registered-commands list). Added dedicated test files for all
+  three, and for `DeploymentEvent::toArray()` - documented as the public
+  shape of a `DeploymentEventReceived` listener's payload, but previously
+  untested and unused internally.

@@ -17,6 +17,7 @@ use MSahidurr\DeployNotifier\Commands\TestCommand;
 use MSahidurr\DeployNotifier\Contracts\EventStore;
 use MSahidurr\DeployNotifier\Contracts\NotificationTransport;
 use MSahidurr\DeployNotifier\Events\DeploymentEventReceived;
+use MSahidurr\DeployNotifier\Listeners\SendDiscordNotification;
 use MSahidurr\DeployNotifier\Listeners\SendSlackNotification;
 use MSahidurr\DeployNotifier\Services\CacheEventStore;
 use MSahidurr\DeployNotifier\Services\DatabaseEventStore;
@@ -25,6 +26,7 @@ use MSahidurr\DeployNotifier\Services\GitMetadataService;
 use MSahidurr\DeployNotifier\Services\MessageFormatter;
 use MSahidurr\DeployNotifier\Services\NotificationRouter;
 use MSahidurr\DeployNotifier\Services\SecretRedactor;
+use MSahidurr\DeployNotifier\Transports\DiscordTransport;
 use MSahidurr\DeployNotifier\Transports\SlackTransport;
 use MSahidurr\DeployNotifier\Transports\TelegramTransport;
 
@@ -39,6 +41,7 @@ class DeployNotifierServiceProvider extends ServiceProvider
                 (string) $app['config']->get('deploy-notifier.telegram.bot_token'),
                 (string) $app['config']->get('deploy-notifier.github.webhook_secret'),
                 ...array_values((array) $app['config']->get('deploy-notifier.slack.webhooks', [])),
+                ...array_values((array) $app['config']->get('deploy-notifier.discord.webhooks', [])),
             ]);
         });
 
@@ -57,6 +60,16 @@ class DeployNotifierServiceProvider extends ServiceProvider
             $config = $app['config']->get('deploy-notifier.slack');
 
             return new SlackTransport(
+                timeoutSeconds: (int) ($config['timeout'] ?? 5),
+                retryTimes: (int) ($config['retry_times'] ?? 2),
+                retrySleepMs: (int) ($config['retry_sleep_ms'] ?? 250),
+            );
+        });
+
+        $this->app->singleton(DiscordTransport::class, function ($app) {
+            $config = $app['config']->get('deploy-notifier.discord');
+
+            return new DiscordTransport(
                 timeoutSeconds: (int) ($config['timeout'] ?? 5),
                 retryTimes: (int) ($config['retry_times'] ?? 2),
                 retrySleepMs: (int) ($config['retry_sleep_ms'] ?? 250),
@@ -134,12 +147,14 @@ class DeployNotifierServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/webhooks.php');
         }
 
-        // Always registered, but a no-op unless deploy-notifier.slack.enabled
-        // is true - see SendSlackNotification. This is the documented
-        // extension point (DeploymentEventReceived) rather than a second
-        // argument on DeploymentManager, which is wired for one primary
-        // transport.
+        // Always registered, but a no-op unless the corresponding
+        // deploy-notifier.{slack,discord}.enabled is true - see
+        // SendSlackNotification / SendDiscordNotification. This is the
+        // documented extension point (DeploymentEventReceived) rather
+        // than extra arguments on DeploymentManager, which is wired for
+        // one primary transport. Both can run at once, independently.
         Event::listen(DeploymentEventReceived::class, SendSlackNotification::class);
+        Event::listen(DeploymentEventReceived::class, SendDiscordNotification::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

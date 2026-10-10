@@ -19,9 +19,9 @@ vendor/bin/phpunit
 ```
 
 The suite runs under [Orchestra Testbench](https://packages.tools/testbench)
-and fakes both the Telegram/Slack HTTP calls (`Http::fake()`) and `git`
-process invocations (`Process::fake()`), so it needs no real bot token,
-chat, webhook, or Git repository.
+and fakes both the Telegram/Slack/Discord HTTP calls (`Http::fake()`) and
+`git` process invocations (`Process::fake()`), so it needs no real bot
+token, chat, webhook, or Git repository.
 
 A handful of tests (anything exercising the database event store -
 `DatabaseEventStoreTest`, `DatabaseEventStoreIntegrationTest`) need the
@@ -49,20 +49,28 @@ violates one of them needs a strong reason:
   deployment step, and the GitHub webhook controller never executes
   anything derived from the request payload.
 - **A notification problem must never affect a deployment's own outcome.**
-  Every transport (`TelegramTransport`, `SlackTransport`) catches delivery
-  failures internally and returns `false`; it never throws, and
-  `deploy-notifier:fail` never changes its own exit code based on whether
-  its own Telegram/Slack call succeeded.
+  Every transport (`TelegramTransport`, `SlackTransport`, `DiscordTransport`)
+  catches delivery failures internally and returns `false`; none of them
+  throws, and `deploy-notifier:fail` never changes its own exit code based
+  on whether its own Telegram/Slack/Discord call succeeded.
 - **Secrets stay out of messages and logs.** `SecretRedactor` scrubs
   configured secrets (and a few generic patterns) from every outgoing
-  message, and both transports specifically scrub their own
+  message, and every transport specifically scrubs its own
   token/webhook-URL from exception messages before logging them - HTTP
   client errors routinely embed the full request URL.
-- **Everything that talks to Telegram, Slack, GitHub, or `git` is behind an
-  interface or a facade that can be faked in tests** (`NotificationTransport`,
-  `EventStore`, the `Process` facade for Git, the `Http` facade for HTTP).
-  Avoid adding a new integration that can only be exercised against a real
-  external service.
+- **Everything that talks to Telegram, Slack, Discord, GitHub, or `git` is
+  behind an interface or a facade that can be faked in tests**
+  (`NotificationTransport`, `EventStore`, the `Process` facade for Git, the
+  `Http` facade for HTTP). Avoid adding a new integration that can only be
+  exercised against a real external service.
+- **A second channel is a listener on `DeploymentEventReceived`, not a
+  second argument on `DeploymentManager`.** `SendSlackNotification` and
+  `SendDiscordNotification` are the templates - `DeploymentManager` stays
+  wired to exactly one primary transport (Telegram).
+- **An environment-keyed config lookup (Telegram chat id, Slack/Discord
+  webhook) is always a plain array lookup**, never
+  `config("...webhooks.{$environment}")` - the latter misreads an
+  environment name containing a literal `.` as a nested config path.
 
 ## Reporting a security issue
 

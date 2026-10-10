@@ -29,6 +29,8 @@ class InstallCommand extends BaseCommand
         $this->line('     survives a cache flush, then run:');
         $this->line('       php artisan vendor:publish --tag=deploy-notifier-migrations');
         $this->line('       php artisan migrate');
+        $this->line('  7. (Optional) Set DEPLOY_SLACK_ENABLED=true and/or DEPLOY_DISCORD_ENABLED=true with');
+        $this->line('     their *_WEBHOOK_URL variables to also notify Slack/Discord alongside Telegram.');
 
         return self::SUCCESS;
     }
