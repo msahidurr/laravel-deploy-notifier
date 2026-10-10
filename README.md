@@ -8,6 +8,9 @@ run your deployment. It never executes anything on your behalf, and a
 notification problem (a Telegram timeout, a misconfigured chat id) never
 changes the exit status of your deployment script.
 
+📖 **[Full user guide](https://msahidurr.github.io/laravel-deploy-notifier/)** - the same
+content as this README, laid out with a visual lifecycle diagram and command reference.
+
 ## Requirements
 
 - PHP 8.1+
