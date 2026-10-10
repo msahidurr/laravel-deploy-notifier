@@ -71,3 +71,16 @@ This project follows [Semantic Versioning](https://semver.org/).
   actually generates a fresh id. Corrected to describe the real
   behaviour (and why most callers should use `requireDeploymentId()`
   instead - see above).
+- CI failed installing dependencies for every Laravel 10 and 11 job
+  (PHP ^8.2 combos only "PHP x - Laravel 12" passed): recent Composer
+  versions refuse, by default, to install any package version flagged by
+  a known security advisory, and a `laravel/framework` advisory
+  (PKSA-d5tc-s1qs-h781) covers every release below v12.69.0 - which is
+  every Laravel 10.x and 11.x release `orchestra/testbench` could pick.
+  `laravel/framework` here is only a transitive dev/test dependency of
+  `orchestra/testbench`, never installed by anyone who `composer
+  require`s this package, so the advisory can't affect a consumer; set
+  `config.audit.block-insecure: false` in `composer.json` to stop it
+  from blocking CI. Verified locally (via the actual pinning steps the
+  workflow runs) that dependencies now resolve and the full test suite
+  passes for Laravel 10 (PHP 8.1), 11 and 12 (PHP 8.3).
