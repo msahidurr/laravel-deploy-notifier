@@ -15,7 +15,7 @@ class GitHubWebhookControllerTest extends TestCase
 
         $app['config']->set('deploy-notifier.github.webhook_secret', self::SECRET);
         $app['config']->set('deploy-notifier.github.webhook_path', 'webhooks/deploy-notifier/github');
-        $app['config']->set('deploy-notifier.github.allowed_repositories', ['organization/daktare']);
+        $app['config']->set('deploy-notifier.github.allowed_repositories', ['organization/example-app']);
     }
 
     protected function setUp(): void
@@ -32,7 +32,7 @@ class GitHubWebhookControllerTest extends TestCase
         return array_merge([
             'ref' => 'refs/heads/main',
             'after' => 'a81d23fabc123',
-            'repository' => ['full_name' => 'organization/daktare'],
+            'repository' => ['full_name' => 'organization/example-app'],
             'pusher' => ['name' => 'developer'],
             'head_commit' => [
                 'id' => 'a81d23fabc123',
@@ -64,7 +64,7 @@ class GitHubWebhookControllerTest extends TestCase
 
         Http::assertSent(function ($request) {
             return str_contains($request['text'] ?? '', 'GIT PUSH')
-                && str_contains($request['text'] ?? '', 'organization/daktare');
+                && str_contains($request['text'] ?? '', 'organization/example-app');
         });
     }
 
@@ -167,7 +167,7 @@ class GitHubWebhookControllerTest extends TestCase
 
     public function test_a_malformed_json_body_is_rejected_without_a_server_error(): void
     {
-        $malformedBody = '{"ref": "refs/heads/main", "repository": {"full_name": "organization/daktare"'; // truncated / invalid JSON
+        $malformedBody = '{"ref": "refs/heads/main", "repository": {"full_name": "organization/example-app"'; // truncated / invalid JSON
 
         $response = $this->call('POST', '/webhooks/deploy-notifier/github', [], [], [], [
             'HTTP_X_GITHUB_EVENT' => 'push',

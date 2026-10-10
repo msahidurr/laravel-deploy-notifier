@@ -107,7 +107,7 @@ return [
         // URI the webhook is registered on, relative to the app root.
         'webhook_path' => env('DEPLOY_GITHUB_WEBHOOK_PATH', 'webhooks/deploy-notifier/github'),
 
-        // comma separated "owner/repo" values, e.g. "acme/daktare,acme/api"
+        // comma separated "owner/repo" values, e.g. "acme/example-app,acme/example-api"
         'allowed_repositories' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('DEPLOY_GITHUB_ALLOWED_REPOSITORIES', ''))

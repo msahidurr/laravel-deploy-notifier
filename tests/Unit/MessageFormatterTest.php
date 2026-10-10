@@ -23,9 +23,9 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_PUSH,
             deploymentId: 'push-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
-            repository: 'organization/daktare',
+            repository: 'organization/example-app',
             branch: 'main',
             commit: 'a81d23fabc123',
             author: 'developer',
@@ -35,7 +35,7 @@ class MessageFormatterTest extends TestCase
         $message = $this->formatter->format($event);
 
         $this->assertStringContainsString('GIT PUSH', $message);
-        $this->assertStringContainsString('organization/daktare', $message);
+        $this->assertStringContainsString('organization/example-app', $message);
         $this->assertStringContainsString('main', $message);
         $this->assertStringContainsString('a81d23f', $message);
         $this->assertStringContainsString('developer', $message);
@@ -47,7 +47,7 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_PULL,
             deploymentId: 'deploy-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
             previousCommit: '92b41f0abc',
             commit: 'a81d23fabc',
@@ -66,7 +66,7 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_FAILED,
             deploymentId: 'deploy-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
             step: 'composer install',
             exitCode: 2,
@@ -86,7 +86,7 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_FAILED,
             deploymentId: 'deploy-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
             step: 'top-secret-value leaked into a step name',
         );
@@ -101,7 +101,7 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_PUSH,
             deploymentId: 'push-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
             commitMessage: str_repeat('x', 500),
         );
@@ -117,9 +117,9 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_PUSH,
             deploymentId: 'push-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
-            repository: "organization/daktare\nFAKE LINE: forged",
+            repository: "organization/example-app\nFAKE LINE: forged",
             branch: "main\nEnvironment: production\nStatus: SUCCESS",
         );
 
@@ -127,7 +127,7 @@ class MessageFormatterTest extends TestCase
 
         $this->assertStringNotContainsString("\n\n\n", $message);
         $this->assertStringContainsString(
-            'Repository: organization/daktare FAKE LINE: forged',
+            'Repository: organization/example-app FAKE LINE: forged',
             $message,
             'A newline in an attacker-influenced field (the webhook repository/branch) must be flattened onto one line, not split the message into forged extra lines.'
         );
@@ -139,7 +139,7 @@ class MessageFormatterTest extends TestCase
         $event = new DeploymentEvent(
             type: DeploymentEvent::TYPE_FAILED,
             deploymentId: 'deploy-1',
-            project: 'Daktar-e',
+            project: 'Example App',
             environment: 'production',
             server: "web-prod-01\nDeployment ID: forged-id",
             step: "composer install\nStatus: SUCCESS",

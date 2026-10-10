@@ -8,7 +8,7 @@
 
 set -Eeuo pipefail
 
-APP_PATH="/var/www/daktare"
+APP_PATH="/var/www/example-app"
 BRANCH="main"
 
 cd "$APP_PATH"
