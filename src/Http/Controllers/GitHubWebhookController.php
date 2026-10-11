@@ -92,12 +92,26 @@ class GitHubWebhookController extends Controller
             commit: is_string($commit) ? $commit : null,
             author: is_string($author) ? $author : null,
             commitMessage: is_string($message) ? $message : null,
-            extra: ['github_delivery' => $deliveryId],
+            extra: array_filter(['github_delivery' => $deliveryId, 'url' => $this->link($payload)]),
         );
 
         $this->manager->record($deploymentEvent);
 
         return response()->json(['status' => 'accepted'], 200);
+    }
+
+    /**
+     * Where to view the push: the commit itself for a single-commit push,
+     * otherwise the compare view covering every commit pushed. Only an
+     * https URL is used, since it ends up as a clickable link.
+     */
+    private function link(array $payload): ?string
+    {
+        $url = count($payload['commits'] ?? []) > 1
+            ? ($payload['compare'] ?? null)
+            : ($payload['head_commit']['url'] ?? $payload['compare'] ?? null);
+
+        return is_string($url) && preg_match('#^https://\S+$#', $url) === 1 ? $url : null;
     }
 
     /**

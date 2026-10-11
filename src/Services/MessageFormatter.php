@@ -47,6 +47,7 @@ class MessageFormatter
         $this->appendIf($lines, 'Commit', $this->short($event->commit));
         $this->appendIf($lines, 'Author', $this->field($event->author));
         $this->appendIf($lines, 'Message', $this->field($event->commitMessage));
+        $this->appendIf($lines, 'Link', $event->extra['url'] ?? null);
 
         $lines[] = '';
         $lines[] = "Environment: {$event->environment}";

@@ -227,4 +227,45 @@ class GitHubWebhookControllerTest extends TestCase
             ->assertOk()
             ->assertJson(['status' => 'accepted']);
     }
+
+    public function test_the_link_points_to_the_commit_for_a_single_commit_push(): void
+    {
+        $payload = $this->pushPayload([
+            'compare' => 'https://github.com/organization/example-app/compare/aaa...bbb',
+            'commits' => [['id' => 'a81d23fabc123']],
+        ]);
+        $payload['head_commit']['url'] = 'https://github.com/organization/example-app/commit/a81d23fabc123';
+
+        $this->postJson('/webhooks/deploy-notifier/github', $payload, $this->signedHeaders($payload))->assertOk();
+
+        Http::assertSent(fn ($request) => str_contains(
+            $request['text'] ?? '',
+            'Link: https://github.com/organization/example-app/commit/a81d23fabc123'
+        ));
+    }
+
+    public function test_the_link_points_to_the_compare_view_for_a_multi_commit_push(): void
+    {
+        $payload = $this->pushPayload([
+            'compare' => 'https://github.com/organization/example-app/compare/aaa...bbb',
+            'commits' => [['id' => 'one'], ['id' => 'two']],
+        ]);
+        $payload['head_commit']['url'] = 'https://github.com/organization/example-app/commit/a81d23fabc123';
+
+        $this->postJson('/webhooks/deploy-notifier/github', $payload, $this->signedHeaders($payload))->assertOk();
+
+        Http::assertSent(fn ($request) => str_contains(
+            $request['text'] ?? '',
+            'Link: https://github.com/organization/example-app/compare/aaa...bbb'
+        ));
+    }
+
+    public function test_a_non_https_link_is_dropped(): void
+    {
+        $payload = $this->pushPayload(['compare' => 'javascript:alert(1)']);
+
+        $this->postJson('/webhooks/deploy-notifier/github', $payload, $this->signedHeaders($payload))->assertOk();
+
+        Http::assertSent(fn ($request) => ! str_contains($request['text'] ?? '', 'Link:'));
+    }
 }

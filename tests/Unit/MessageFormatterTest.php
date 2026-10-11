@@ -42,6 +42,25 @@ class MessageFormatterTest extends TestCase
         $this->assertStringContainsString('Improve API performance', $message);
     }
 
+    public function test_push_message_includes_the_link_when_present(): void
+    {
+        $event = new DeploymentEvent(
+            type: DeploymentEvent::TYPE_PUSH,
+            deploymentId: 'push-1',
+            project: 'Example App',
+            environment: 'production',
+            repository: 'organization/example-app',
+            branch: 'main',
+            commit: 'a81d23fabc123',
+            extra: ['url' => 'https://github.com/organization/example-app/commit/a81d23fabc123'],
+        );
+
+        $this->assertStringContainsString(
+            'Link: https://github.com/organization/example-app/commit/a81d23fabc123',
+            $this->formatter->format($event)
+        );
+    }
+
     public function test_pull_message_reports_new_commit_count(): void
     {
         $event = new DeploymentEvent(
