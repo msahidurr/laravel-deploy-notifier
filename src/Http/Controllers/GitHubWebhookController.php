@@ -36,18 +36,7 @@ class GitHubWebhookController extends Controller
             return response()->json(['status' => 'ignored', 'reason' => "event [{$event}] is not handled"], 202);
         }
 
-        $deliveryId = (string) $request->header('X-GitHub-Delivery', '');
-
-        if ($deliveryId !== '') {
-            $dedupeTtl = (int) config('deploy-notifier.deduplication.ttl', 86400);
-
-            if (config('deploy-notifier.deduplication.enabled', true)
-                && ! $this->eventStore->markSeenOnce('github-delivery:'.$deliveryId, $dedupeTtl)) {
-                return response()->json(['status' => 'duplicate'], 200);
-            }
-        }
-
-        $payload = $request->json()->all();
+        $payload = $this->payload($request);
 
         $repository = $payload['repository']['full_name'] ?? null;
         $ref = $payload['ref'] ?? null;
@@ -64,6 +53,20 @@ class GitHubWebhookController extends Controller
             ]);
 
             return response()->json(['status' => 'rejected', 'reason' => 'repository not allowed'], 403);
+        }
+
+        // Deduplicate only once the payload is known to be valid, so a
+        // delivery rejected above can still be fixed and redelivered
+        // from GitHub (redeliveries reuse the same delivery ID).
+        $deliveryId = (string) $request->header('X-GitHub-Delivery', '');
+
+        if ($deliveryId !== '') {
+            $dedupeTtl = (int) config('deploy-notifier.deduplication.ttl', 86400);
+
+            if (config('deploy-notifier.deduplication.enabled', true)
+                && ! $this->eventStore->markSeenOnce('github-delivery:'.$deliveryId, $dedupeTtl)) {
+                return response()->json(['status' => 'duplicate'], 200);
+            }
         }
 
         $branch = str_starts_with($ref, 'refs/heads/') ? substr($ref, strlen('refs/heads/')) : $ref;
@@ -95,5 +98,24 @@ class GitHubWebhookController extends Controller
         $this->manager->record($deploymentEvent);
 
         return response()->json(['status' => 'accepted'], 200);
+    }
+
+    /**
+     * GitHub webhooks can use either content type: "application/json"
+     * sends the JSON as the raw body, while
+     * "application/x-www-form-urlencoded" sends it URL-encoded in a
+     * `payload` form field. Accept both.
+     */
+    private function payload(Request $request): array
+    {
+        if ($request->isJson()) {
+            return $request->json()->all();
+        }
+
+        parse_str($request->getContent(), $form);
+
+        $decoded = json_decode((string) ($form['payload'] ?? ''), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 }

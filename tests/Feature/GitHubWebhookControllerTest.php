@@ -195,4 +195,36 @@ class GitHubWebhookControllerTest extends TestCase
         $response->assertStatus(401);
         Http::assertNothingSent();
     }
+
+    public function test_a_form_encoded_push_is_accepted(): void
+    {
+        // GitHub's "application/x-www-form-urlencoded" content type sends
+        // the JSON in a `payload` field; the signature covers the raw body.
+        $body = http_build_query(['payload' => json_encode($this->pushPayload())]);
+
+        $response = $this->call('POST', '/webhooks/deploy-notifier/github', [], [], [], [
+            'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_X_GITHUB_EVENT' => 'push',
+            'HTTP_X_GITHUB_DELIVERY' => 'delivery-form',
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256='.hash_hmac('sha256', $body, self::SECRET),
+        ], $body);
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'accepted']);
+        Http::assertSent(fn ($request) => str_contains($request['text'] ?? '', 'organization/example-app'));
+    }
+
+    public function test_a_rejected_delivery_can_be_redelivered(): void
+    {
+        $invalid = ['ref' => 'refs/heads/main'];
+
+        $this->postJson('/webhooks/deploy-notifier/github', $invalid, $this->signedHeaders($invalid, 'delivery-redo'))
+            ->assertStatus(422);
+
+        $payload = $this->pushPayload();
+
+        $this->postJson('/webhooks/deploy-notifier/github', $payload, $this->signedHeaders($payload, 'delivery-redo'))
+            ->assertOk()
+            ->assertJson(['status' => 'accepted']);
+    }
 }
